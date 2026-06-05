@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
-import Image from "next/image";
 import { getIlan } from "@/lib/supabase";
 import { formatFiyat } from "@/lib/format";
+import FotoGalerisi from "@/components/listing/FotoGalerisi";
 import LeadFormu from "@/components/listing/LeadFormu";
 import MortgageHesaplayici from "@/components/listing/MortgageHesaplayici";
 import PaylasButon from "@/components/listing/PaylasButon";
@@ -45,34 +45,7 @@ export default async function IlanDetayPage({ params }: Props) {
       <div className="flex flex-col lg:flex-row gap-8">
         {/* Sol: Ana içerik */}
         <div className="flex-1 min-w-0">
-          {/* Fotoğraf galerisi */}
-          <div className="grid grid-cols-1 gap-2 mb-6">
-            {ilan.gorseller.length > 0 ? (
-              <div className="relative h-96 rounded-xl overflow-hidden bg-gray-200">
-                <Image
-                  src={ilan.gorseller[0]}
-                  alt={ilan.baslik}
-                  fill
-                  className="object-cover"
-                  priority
-                  sizes="(max-width: 1024px) 100vw, 66vw"
-                />
-              </div>
-            ) : (
-              <div className="h-96 rounded-xl bg-gray-200 flex items-center justify-center text-gray-400">
-                Görsel yok
-              </div>
-            )}
-            {ilan.gorseller.length > 1 && (
-              <div className="grid grid-cols-4 gap-2">
-                {ilan.gorseller.slice(1, 5).map((g, i) => (
-                  <div key={i} className="relative h-24 rounded-lg overflow-hidden bg-gray-200">
-                    <Image src={g} alt={`${ilan.baslik} - ${i + 2}`} fill className="object-cover" loading="lazy" sizes="25vw" />
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          <FotoGalerisi gorseller={ilan.gorseller} baslik={ilan.baslik} />
 
           {/* Başlık & fiyat */}
           <div className="flex items-start justify-between gap-4 mb-4">
