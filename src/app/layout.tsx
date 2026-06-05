@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import Link from "next/link";
+import { headers } from "next/headers";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -10,7 +11,18 @@ export const metadata: Metadata = {
   description: "Türkiye'nin güvenilir emlak platformu",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const heads = await headers();
+  const isAdmin = heads.get("x-admin-route") === "1";
+
+  if (isAdmin) {
+    return (
+      <html lang="tr">
+        <body className={inter.className}>{children}</body>
+      </html>
+    );
+  }
+
   return (
     <html lang="tr">
       <body className={`${inter.className} bg-gray-50 min-h-screen`}>
