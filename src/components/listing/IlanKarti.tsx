@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useState } from "react";
 import { MapPin, Maximize2, BedDouble, Bath, Eye } from "lucide-react";
 import { formatFiyat } from "@/lib/format";
+import { gorselUrl, PLACEHOLDER } from "@/lib/storage";
 import type { Ilan } from "@/types";
 
 interface Props {
@@ -13,7 +14,8 @@ interface Props {
 
 export default function IlanKarti({ ilan }: Props) {
   const [imgIndex, setImgIndex] = useState(0);
-  const gorsel = ilan.gorseller[imgIndex] || "/placeholder.jpg";
+  const [imgHata, setImgHata] = useState(false);
+  const gorsel = imgHata ? PLACEHOLDER : gorselUrl(ilan.gorseller[imgIndex] || "");
 
   return (
     <Link href={`/ilanlar/${ilan.slug}`} className="group block rounded-xl overflow-hidden border border-gray-200 hover:shadow-lg transition-shadow bg-white">
@@ -26,6 +28,7 @@ export default function IlanKarti({ ilan }: Props) {
           className="object-cover group-hover:scale-105 transition-transform duration-300"
           loading="lazy"
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          onError={() => setImgHata(true)}
         />
         {/* Tip badge */}
         <span className={`absolute top-3 left-3 px-2 py-1 text-xs font-semibold rounded-full ${
@@ -45,7 +48,7 @@ export default function IlanKarti({ ilan }: Props) {
             {ilan.gorseller.slice(0, 5).map((_, i) => (
               <button
                 key={i}
-                onClick={(e) => { e.preventDefault(); setImgIndex(i); }}
+                onClick={(e) => { e.preventDefault(); setImgIndex(i); setImgHata(false); }}
                 className={`w-1.5 h-1.5 rounded-full transition-colors ${i === imgIndex ? "bg-white" : "bg-white/50"}`}
               />
             ))}

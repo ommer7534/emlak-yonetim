@@ -3,10 +3,25 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight, X, ZoomIn } from "lucide-react";
+import { gorselUrl, PLACEHOLDER } from "@/lib/storage";
 
 interface Props {
   gorseller: string[];
   baslik: string;
+}
+
+function SafeImage({
+  src, alt, ...props
+}: React.ComponentProps<typeof Image> & { src: string }) {
+  const [hata, setHata] = useState(false);
+  return (
+    <Image
+      {...props}
+      src={hata ? PLACEHOLDER : gorselUrl(src)}
+      alt={alt}
+      onError={() => setHata(true)}
+    />
+  );
 }
 
 export default function FotoGalerisi({ gorseller, baslik }: Props) {
@@ -22,7 +37,6 @@ export default function FotoGalerisi({ gorseller, baslik }: Props) {
     setAktif((i) => (i + 1) % gorseller.length);
   }, [gorseller.length]);
 
-  // Klavye navigasyonu
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "ArrowLeft") onceki();
@@ -33,21 +47,15 @@ export default function FotoGalerisi({ gorseller, baslik }: Props) {
     return () => window.removeEventListener("keydown", handler);
   }, [onceki, sonraki]);
 
-  // Aktif thumbnail'i görünür kıl
   useEffect(() => {
     const container = thumbnailRef.current;
     if (!container) return;
     const thumb = container.children[aktif] as HTMLElement;
-    if (thumb) {
-      thumb.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
-    }
+    if (thumb) thumb.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
   }, [aktif]);
 
-  // Touch/swipe desteği
   const touchStartX = useRef<number | null>(null);
-  const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartX.current = e.touches[0].clientX;
-  };
+  const handleTouchStart = (e: React.TouchEvent) => { touchStartX.current = e.touches[0].clientX; };
   const handleTouchEnd = (e: React.TouchEvent) => {
     if (touchStartX.current === null) return;
     const diff = touchStartX.current - e.changedTouches[0].clientX;
@@ -57,8 +65,8 @@ export default function FotoGalerisi({ gorseller, baslik }: Props) {
 
   if (!gorseller.length) {
     return (
-      <div className="h-80 rounded-xl bg-gray-100 flex items-center justify-center text-gray-400 mb-6">
-        Görsel yok
+      <div className="relative h-72 sm:h-[420px] rounded-xl overflow-hidden bg-gray-100 mb-6">
+        <Image src={PLACEHOLDER} alt="Görsel yok" fill className="object-contain p-8" sizes="100vw" />
       </div>
     );
   }
@@ -73,7 +81,7 @@ export default function FotoGalerisi({ gorseller, baslik }: Props) {
           onTouchEnd={handleTouchEnd}
           onClick={() => setLightbox(true)}
         >
-          <Image
+          <SafeImage
             key={aktif}
             src={gorseller[aktif]}
             alt={`${baslik} - ${aktif + 1}`}
@@ -83,17 +91,14 @@ export default function FotoGalerisi({ gorseller, baslik }: Props) {
             sizes="(max-width: 1024px) 100vw, 66vw"
           />
 
-          {/* Sayaç */}
           <div className="absolute top-3 left-3 bg-black/50 text-white text-xs px-2.5 py-1 rounded-full">
             {aktif + 1} / {gorseller.length}
           </div>
 
-          {/* Büyüt ipucu */}
           <div className="absolute top-3 right-3 bg-black/50 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
             <ZoomIn size={14} />
           </div>
 
-          {/* Sol ok */}
           {gorseller.length > 1 && (
             <>
               <button
@@ -103,8 +108,6 @@ export default function FotoGalerisi({ gorseller, baslik }: Props) {
               >
                 <ChevronLeft size={20} className="text-gray-800" />
               </button>
-
-              {/* Sağ ok */}
               <button
                 onClick={(e) => { e.stopPropagation(); sonraki(); }}
                 className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/85 hover:bg-white flex items-center justify-center shadow-md transition-all sm:opacity-0 sm:group-hover:opacity-100 opacity-100"
@@ -128,20 +131,11 @@ export default function FotoGalerisi({ gorseller, baslik }: Props) {
                 key={i}
                 onClick={() => setAktif(i)}
                 className={`relative flex-shrink-0 w-20 h-14 rounded-lg overflow-hidden border-2 transition-all duration-150 ${
-                  i === aktif
-                    ? "border-blue-500 opacity-100 scale-100"
-                    : "border-transparent opacity-55 hover:opacity-90"
+                  i === aktif ? "border-blue-500 opacity-100" : "border-transparent opacity-55 hover:opacity-90"
                 }`}
                 aria-label={`Fotoğraf ${i + 1}`}
               >
-                <Image
-                  src={g}
-                  alt={`${baslik} - ${i + 1}`}
-                  fill
-                  className="object-cover"
-                  sizes="80px"
-                  loading="lazy"
-                />
+                <SafeImage src={g} alt={`${baslik} - ${i + 1}`} fill className="object-cover" sizes="80px" loading="lazy" />
               </button>
             ))}
           </div>
@@ -156,7 +150,6 @@ export default function FotoGalerisi({ gorseller, baslik }: Props) {
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
         >
-          {/* Kapat */}
           <button
             onClick={() => setLightbox(false)}
             className="absolute top-4 right-4 text-white/70 hover:text-white p-2 rounded-full hover:bg-white/10 transition-colors z-10"
@@ -165,28 +158,34 @@ export default function FotoGalerisi({ gorseller, baslik }: Props) {
             <X size={24} />
           </button>
 
-          {/* Sayaç */}
           <div className="absolute top-5 left-1/2 -translate-x-1/2 text-white/70 text-sm">
             {aktif + 1} / {gorseller.length}
           </div>
 
-          {/* Sol ok */}
           {gorseller.length > 1 && (
-            <button
-              onClick={(e) => { e.stopPropagation(); onceki(); }}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-white/70 hover:text-white p-2 rounded-full hover:bg-white/10 transition-colors"
-              aria-label="Önceki"
-            >
-              <ChevronLeft size={32} />
-            </button>
+            <>
+              <button
+                onClick={(e) => { e.stopPropagation(); onceki(); }}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-white/70 hover:text-white p-2 rounded-full hover:bg-white/10 transition-colors"
+                aria-label="Önceki"
+              >
+                <ChevronLeft size={32} />
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); sonraki(); }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/70 hover:text-white p-2 rounded-full hover:bg-white/10 transition-colors"
+                aria-label="Sonraki"
+              >
+                <ChevronRight size={32} />
+              </button>
+            </>
           )}
 
-          {/* Ana görsel */}
           <div
-            className="relative w-full h-full max-w-5xl max-h-[85vh] mx-12"
+            className="relative w-full h-full max-w-5xl max-h-[85vh] mx-14"
             onClick={(e) => e.stopPropagation()}
           >
-            <Image
+            <SafeImage
               key={`lb-${aktif}`}
               src={gorseller[aktif]}
               alt={`${baslik} - ${aktif + 1}`}
@@ -197,20 +196,11 @@ export default function FotoGalerisi({ gorseller, baslik }: Props) {
             />
           </div>
 
-          {/* Sağ ok */}
           {gorseller.length > 1 && (
-            <button
-              onClick={(e) => { e.stopPropagation(); sonraki(); }}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-white/70 hover:text-white p-2 rounded-full hover:bg-white/10 transition-colors"
-              aria-label="Sonraki"
+            <div
+              className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 max-w-[90vw] overflow-x-auto pb-1"
+              style={{ scrollbarWidth: "none" }}
             >
-              <ChevronRight size={32} />
-            </button>
-          )}
-
-          {/* Lightbox thumbnails */}
-          {gorseller.length > 1 && (
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 max-w-[90vw] overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
               {gorseller.map((g, i) => (
                 <button
                   key={i}
@@ -219,7 +209,7 @@ export default function FotoGalerisi({ gorseller, baslik }: Props) {
                     i === aktif ? "border-white opacity-100" : "border-transparent opacity-40 hover:opacity-70"
                   }`}
                 >
-                  <Image src={g} alt="" fill className="object-cover" sizes="56px" loading="lazy" />
+                  <SafeImage src={g} alt="" fill className="object-cover" sizes="56px" loading="lazy" />
                 </button>
               ))}
             </div>

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300">
+  <rect width="400" height="300" fill="#f3f4f6"/>
+  <g transform="translate(200,130)" opacity="0.35">
+    <path d="M0,-60 L60,-10 L60,50 L-60,50 L-60,-10 Z" fill="none" stroke="#9ca3af" stroke-width="4" stroke-linejoin="round"/>
+    <path d="M-80,-10 L0,-70 L80,-10" fill="none" stroke="#9ca3af" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="-18" y="15" width="36" height="35" rx="3" fill="none" stroke="#9ca3af" stroke-width="3.5"/>
+    <rect x="-40" y="5" width="22" height="22" rx="2" fill="none" stroke="#9ca3af" stroke-width="3"/>
+  </g>
+  <text x="200" y="210" text-anchor="middle" font-family="system-ui,sans-serif" font-size="14" fill="#9ca3af">Görsel yükleniyor...</text>
+</svg>

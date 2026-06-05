@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { createIlan } from "@/lib/supabase";
+import Image from "next/image";
+import { createIlan, supabase } from "@/lib/supabase";
 import { ISITMA_TIPLERI, OZELLIKLER, ILCELER } from "@/lib/format";
+import { gorselUrl } from "@/lib/storage";
 import type { Ilan } from "@/types";
 
 type FormData = Omit<Ilan, "id" | "slug" | "goruntulenme" | "created_at" | "updated_at">;
@@ -17,10 +19,14 @@ const bos: FormData = {
   lat: null, lng: null, gorseller: [], ozellikler: [],
 };
 
+type YuklemeState = { dosya: string; durum: "yukleniyor" | "tamam" | "hata"; hata?: string };
+
 export default function YeniIlanPage() {
   const [form, setForm] = useState<FormData>(bos);
-  const [gorselUrl, setGorselUrl] = useState("");
   const [loading, setLoading] = useState(false);
+  const [yuklenenler, setYuklenenler] = useState<YuklemeState[]>([]);
+  const [surukle, setSurukle] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
   const set = (key: keyof FormData, value: unknown) =>
@@ -31,11 +37,36 @@ export default function YeniIlanPage() {
       ? form.ozellikler.filter((x) => x !== o)
       : [...form.ozellikler, o]);
 
-  const gorselEkle = () => {
-    if (!gorselUrl.trim()) return;
-    set("gorseller", [...form.gorseller, gorselUrl.trim()]);
-    setGorselUrl("");
-  };
+  async function dosyalariYukle(dosyalar: FileList | File[]) {
+    const liste = Array.from(dosyalar).filter((f) => f.type.startsWith("image/"));
+    if (!liste.length) return;
+
+    for (const dosya of liste) {
+      const yol = `listings/${Date.now()}-${dosya.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+      setYuklenenler((prev) => [...prev, { dosya: yol, durum: "yukleniyor" }]);
+
+      const { error } = await supabase.storage.from("images").upload(yol, dosya, {
+        cacheControl: "3600",
+        upsert: false,
+      });
+
+      if (error) {
+        setYuklenenler((prev) =>
+          prev.map((y) => y.dosya === yol ? { ...y, durum: "hata", hata: error.message } : y)
+        );
+      } else {
+        setYuklenenler((prev) =>
+          prev.map((y) => y.dosya === yol ? { ...y, durum: "tamam" } : y)
+        );
+        setForm((f) => ({ ...f, gorseller: [...f.gorseller, yol] }));
+      }
+    }
+  }
+
+  function gorselKaldir(yol: string) {
+    setForm((f) => ({ ...f, gorseller: f.gorseller.filter((g) => g !== yol) }));
+    setYuklenenler((prev) => prev.filter((y) => y.dosya !== yol));
+  }
 
   const gonder = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -192,27 +223,85 @@ export default function YeniIlanPage() {
         </section>
 
         {/* Görseller */}
-        <section className="bg-white rounded-xl border border-gray-200 p-6 space-y-3">
-          <h2 className="font-semibold text-gray-800">Görseller (URL)</h2>
-          <div className="flex gap-2">
-            <input type="url" className={input} value={gorselUrl}
-              onChange={(e) => setGorselUrl(e.target.value)}
-              placeholder="https://..." onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), gorselEkle())} />
-            <button type="button" onClick={gorselEkle}
-              className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium">
-              Ekle
-            </button>
+        <section className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
+          <h2 className="font-semibold text-gray-800">Fotoğraflar</h2>
+
+          {/* Yükleme alanı */}
+          <div
+            onClick={() => fileInputRef.current?.click()}
+            onDragOver={(e) => { e.preventDefault(); setSurukle(true); }}
+            onDragLeave={() => setSurukle(false)}
+            onDrop={(e) => { e.preventDefault(); setSurukle(false); dosyalariYukle(e.dataTransfer.files); }}
+            className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
+              surukle ? "border-blue-500 bg-blue-50" : "border-gray-300 hover:border-blue-400 hover:bg-gray-50"
+            }`}
+          >
+            <svg className="w-10 h-10 mx-auto text-gray-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <p className="text-sm font-medium text-gray-700">Fotoğraf seç veya buraya sürükle</p>
+            <p className="text-xs text-gray-400 mt-1">JPG, PNG, WebP · Birden fazla seçebilirsiniz</p>
           </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={(e) => e.target.files && dosyalariYukle(e.target.files)}
+          />
+
+          {/* Önizleme grid */}
           {form.gorseller.length > 0 && (
-            <ul className="space-y-1">
-              {form.gorseller.map((g, i) => (
-                <li key={i} className="flex items-center justify-between text-xs bg-gray-50 rounded-lg px-3 py-2">
-                  <span className="truncate text-gray-600">{g}</span>
-                  <button type="button" onClick={() => set("gorseller", form.gorseller.filter((_, j) => j !== i))}
-                    className="text-red-500 hover:text-red-700 ml-2">✕</button>
-                </li>
-              ))}
-            </ul>
+            <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+              {form.gorseller.map((yol, i) => {
+                const yukl = yuklenenler.find((y) => y.dosya === yol);
+                return (
+                  <div key={yol} className="relative group aspect-square rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
+                    <Image
+                      src={gorselUrl(yol)}
+                      alt={`Fotoğraf ${i + 1}`}
+                      fill
+                      className="object-cover"
+                      sizes="120px"
+                    />
+                    {/* Yükleniyor spinner */}
+                    {yukl?.durum === "yukleniyor" && (
+                      <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
+                        <svg className="w-6 h-6 text-blue-500 animate-spin" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                        </svg>
+                      </div>
+                    )}
+                    {/* Hata */}
+                    {yukl?.durum === "hata" && (
+                      <div className="absolute inset-0 bg-red-500/80 flex items-center justify-center">
+                        <span className="text-white text-xs text-center px-1">{yukl.hata ?? "Hata"}</span>
+                      </div>
+                    )}
+                    {/* İlk fotoğraf rozeti */}
+                    {i === 0 && (
+                      <span className="absolute bottom-1 left-1 bg-blue-600 text-white text-[10px] px-1.5 py-0.5 rounded-full">
+                        Kapak
+                      </span>
+                    )}
+                    {/* Sil butonu */}
+                    <button
+                      type="button"
+                      onClick={() => gorselKaldir(yol)}
+                      className="absolute top-1 right-1 w-6 h-6 bg-black/60 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs"
+                      aria-label="Kaldır"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          {form.gorseller.length > 0 && (
+            <p className="text-xs text-gray-400">{form.gorseller.length} fotoğraf · İlk fotoğraf kapak görseli olur</p>
           )}
         </section>
 
