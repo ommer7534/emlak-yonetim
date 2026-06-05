@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import Link from "next/link";
 import { headers } from "next/headers";
+import FloatingButtons from "@/components/ui/FloatingButtons";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -48,6 +49,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <footer className="mt-16 border-t border-gray-200 bg-white py-8 text-center text-xs text-gray-400">
           © {new Date().getFullYear()} EmlakYönetim. Tüm hakları saklıdır.
         </footer>
+        <FloatingButtons />
       </body>
     </html>
   );
